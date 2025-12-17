@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
-import sqlite3, hashlib, os
+import sqlite3, hashlib, os 
 
 # ============================================================
 # CONFIGURACIÓN GENERAL
@@ -40,24 +40,69 @@ def init_db():
     );
     """)
 
+    # Tabla favoritos
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS favoritos (
+        user_id INTEGER,
+        receta_id INTEGER,
+        PRIMARY KEY (user_id, receta_id),
+        FOREIGN KEY (user_id) REFERENCES usuarios(id),
+        FOREIGN KEY (receta_id) REFERENCES recetas(id)
+    );
+    """)
+
+
     # Insertar recetas ejemplo si aún no existen
     c.execute("SELECT COUNT(*) FROM recetas")
     if c.fetchone()[0] == 0:
         recetas = [
-            ("Café Latte", "Café suave con leche espumosa.",
-             "Café espresso\nLeche entera\nEspuma de leche",
-             "1. Preparar espresso.\n2. Calentar leche.\n3. Agregar espuma y servir.",
-             "latte.jpg"),
-            ("Capuccino", "Espresso con partes iguales de leche y espuma.",
-             "Café espresso\nLeche\nCacao en polvo",
-             "1. Preparar espresso.\n2. Agregar leche caliente y espuma.\n3. Espolvorear cacao.",
-             "capuccino.jpg"),
-            ("Moka", "Café con leche y chocolate.",
-             "Café espresso\nLeche\nChocolate en polvo\nAzúcar al gusto",
-             "1. Preparar espresso.\n2. Calentar leche con chocolate.\n3. Mezclar y servir caliente.",
-             "moka.jpg")
-        ]
-        c.executemany("INSERT INTO recetas (nombre, descripcion, ingredientes, pasos, imagen) VALUES (?, ?, ?, ?, ?)", recetas)
+
+    ("Café Negro", "Café clásico sin leche.",
+     "Café molido\nAgua",
+     "1. Hervir el agua.\n2. Agregar el café.\n3. Colar y servir.",
+     "negro.jpg"),
+
+    ("Café con Leche", "Café suave con leche caliente.",
+     "Café negro\nLeche",
+     "1. Preparar el café.\n2. Calentar la leche.\n3. Mezclar y servir.",
+     "cafe_leche.jpg"),
+
+    ("Espresso", "Café concentrado e intenso.",
+     "Café molido fino\nAgua",
+     "1. Colocar el café en la cafetera.\n2. Extraer por pocos segundos.\n3. Servir caliente.",
+     "espresso.jpg"),
+
+    ("Cappuccino", "Espresso con leche y espuma.",
+     "Café espresso\nLeche\nEspuma de leche",
+     "1. Preparar el espresso.\n2. Agregar leche caliente.\n3. Añadir espuma.",
+     "capuccino.jpg"),
+
+    ("Latte", "Café con mucha leche y poco café.",
+     "Café espresso\nLeche caliente",
+     "1. Preparar el espresso.\n2. Agregar abundante leche.\n3. Servir.",
+     "latte.jpg"),
+
+    ("Moka", "Café con chocolate y leche.",
+     "Café espresso\nLeche\nChocolate",
+     "1. Preparar el espresso.\n2. Mezclar con chocolate.\n3. Agregar leche.",
+     "moka.jpg"),
+
+    ("Americano", "Espresso suavizado con agua.",
+     "Café espresso\nAgua caliente",
+     "1. Preparar el espresso.\n2. Agregar agua caliente.",
+     "americano.jpg"),
+
+    ("Café Helado", "Café frío refrescante.",
+     "Café\nHielo\nAzúcar (opcional)",
+     "1. Preparar el café.\n2. Enfriar.\n3. Agregar hielo.",
+     "helado.jpg"),
+
+    ("Macchiato", "Espresso con un toque de espuma.",
+     "Café espresso\nEspuma de leche",
+     "1. Preparar el espresso.\n2. Agregar un poco de espuma.",
+     "macchiato.jpg")
+]
+        c.executemany("INSERT INTO recetas (nombre, descripcion, ingredientes, pasos, imagen)  VALUES (?, ?, ?, ?, ?)", recetas)
 
     conn.commit()
     conn.close()
@@ -70,7 +115,7 @@ class CoffeeTimeApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("CoffeeTime")
-        self.geometry("460x720")
+        self.geometry("300x600")
         self.resizable(False, False)
         self.current_user = None
 
@@ -80,9 +125,9 @@ class CoffeeTimeApp(tk.Tk):
         style.theme_use("clam")
 
         style.configure("TFrame", background="#F8EFEA")
-        style.configure("TLabel", background="#F8EFEA", font=("Segoe UI", 11))
+        style.configure("TLabel", background="#F8EFEA", font=("Segoe UI", 8))
         style.configure("Header.TLabel", background="#F8EFEA", font=("Segoe UI Semibold", 20, "bold"), foreground="#4B2E05")
-        style.configure("TButton", font=("Segoe UI", 11), padding=6, relief="flat", background="#DCC3A1", foreground="#4B2E05")
+        style.configure("TButton", font=("Segoe UI", 8), padding=11, relief="flat", background="#DCC3A1", foreground="#4B2E05")
         style.map("TButton",
                   background=[("active", "#C7A27C"), ("pressed", "#B58E68")])
 
@@ -90,7 +135,8 @@ class CoffeeTimeApp(tk.Tk):
         container.pack(fill="both", expand=True)
 
         self.frames = {}
-        for F in (LoginFrame, RegisterFrame, MainMenuFrame, RecipesFrame):
+        for F in (LoginFrame, RegisterFrame, MainMenuFrame, RecipesFrame, FavoritesFrame):
+
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -199,7 +245,7 @@ class RegisterFrame(ttk.Frame):
 
     def on_register(self):
         u = self.username_entry.get().strip()
-        d = self.display_entry.get().strip()
+        d = self.display_entry.get().strip()    
         p1 = self.password_entry.get().strip()
         p2 = self.password2_entry.get().strip()
         if p1 != p2:
@@ -208,7 +254,7 @@ class RegisterFrame(ttk.Frame):
         self.controller.register_user(u, p1, d)
 
 # --- MENÚ PRINCIPAL ---
-class MainMenuFrame(ttk.Frame):
+class MainMenuFrame(ttk.Frame): 
     def __init__(self, parent, controller: CoffeeTimeApp):
         super().__init__(parent)
         self.controller = controller
@@ -217,6 +263,8 @@ class MainMenuFrame(ttk.Frame):
 
         ttk.Button(self, text="Ver recetas", command=lambda: controller.show_frame(RecipesFrame)).pack(fill="x", padx=60, pady=5)
         ttk.Button(self, text="Cerrar sesión", command=self.logout).pack(fill="x", padx=60, pady=15)
+        ttk.Button(self,text="⭐ Mis favoritos",command=lambda: controller.show_frame(FavoritesFrame)).pack(fill="x", padx=60, pady=5)
+        
         self.bind("<<ShowFrame>>", self.on_show)
 
     def on_show(self, event=None):
@@ -230,13 +278,15 @@ class MainMenuFrame(ttk.Frame):
         self.controller.show_frame(LoginFrame)
 
 # --- VER RECETAS ---
+
 class RecipesFrame(ttk.Frame):
+
     def __init__(self, parent, controller: CoffeeTimeApp):
         super().__init__(parent)
         self.controller = controller
 
         ttk.Label(self, text="Recetas de café", style="Header.TLabel").pack(pady=10)
-        self.listbox = ttk.Treeview(self, columns=("nombre",), show="headings", height=5)
+        self.listbox = ttk.Treeview(self, columns=("nombre",), show="headings", height=4)
         self.listbox.heading("nombre", text="Recetas disponibles")
         self.listbox.pack(fill="x", padx=20)
         self.listbox.bind("<<TreeviewSelect>>", self.mostrar_receta)
@@ -248,6 +298,8 @@ class RecipesFrame(ttk.Frame):
         self.ingredients_label.pack(pady=4)
         self.steps_label = ttk.Label(self, text="", wraplength=400, justify="left")
         self.steps_label.pack(pady=4)
+
+        ttk.Button(self,text="⭐ Agregar a favoritos",command=self.agregar_favorito).pack(pady=6)
 
         ttk.Button(self, text="Volver al menú", command=lambda: controller.show_frame(MainMenuFrame)).pack(pady=10)
         self.bind("<<ShowFrame>>", self.cargar_lista)
@@ -274,6 +326,107 @@ class RecipesFrame(ttk.Frame):
         conn.close()
 
         if os.path.exists(img):
+            image = Image.open(img).resize((200, 150))
+            self.photo = ImageTk.PhotoImage(image)
+            self.image_label.config(image=self.photo, text="")
+        else:
+            self.image_label.config(image="", text="[Imagen no disponible]")
+
+        self.ingredients_label.config(text=f"Ingredientes:\n{ing}")
+        self.steps_label.config(text=f"Pasos:\n{pas}")
+        
+    def agregar_favorito(self):
+        sel = self.listbox.selection()
+        if not sel:
+            messagebox.showwarning("Atención", "Selecciona una receta primero.")
+            return
+
+        receta_id = sel[0]
+        user = self.controller.current_user
+
+        if not user:
+            messagebox.showerror("Error", "Debes iniciar sesión.")
+            return
+
+        user_id = user[0]
+
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        try:
+            c.execute(
+                "INSERT INTO favoritos (user_id, receta_id) VALUES (?, ?)",
+                (user_id, receta_id)
+            )
+            conn.commit()
+            messagebox.showinfo("Favoritos", "⭐ Receta agregada a favoritos.")
+        except sqlite3.IntegrityError:
+            messagebox.showinfo("Favoritos", "Esta receta ya está en tus favoritos.")
+        finally:
+            conn.close()
+            
+class FavoritesFrame(ttk.Frame):
+    def __init__(self, parent, controller: CoffeeTimeApp):
+        super().__init__(parent)
+        self.controller = controller
+
+        ttk.Label(self, text="⭐ Mis recetas favoritas", style="Header.TLabel").pack(pady=10)
+
+        self.listbox = ttk.Treeview(self, columns=("nombre",), show="headings", height=6)
+        self.listbox.heading("nombre", text="Recetas")
+        self.listbox.pack(fill="x", padx=30)
+        self.listbox.bind("<<TreeviewSelect>>", self.mostrar_receta)
+
+        self.image_label = ttk.Label(self)
+        self.image_label.pack(pady=10)
+
+        self.ingredients_label = ttk.Label(self, wraplength=400, justify="left")
+        self.ingredients_label.pack(pady=4)
+
+        self.steps_label = ttk.Label(self, wraplength=400, justify="left")
+        self.steps_label.pack(pady=4)
+
+        ttk.Button(self, text="Volver al menú", command=lambda: controller.show_frame(MainMenuFrame)).pack(pady=10)
+
+        self.bind("<<ShowFrame>>", self.cargar_favoritos)
+
+    def cargar_favoritos(self, event=None):
+        user = self.controller.current_user
+        if not user:
+            return
+
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+            SELECT r.id, r.nombre
+            FROM recetas r
+            JOIN favoritos f ON r.id = f.receta_id
+            WHERE f.user_id = ?
+        """, (user[0],))
+        recetas = c.fetchall()
+        conn.close()
+
+        for i in self.listbox.get_children():
+            self.listbox.delete(i)
+
+        for r in recetas:
+            self.listbox.insert("", "end", iid=r[0], values=(r[1],))
+
+    def mostrar_receta(self, event=None):
+        sel = self.listbox.selection()
+        if not sel:
+            return
+
+        rid = sel[0]
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute(
+            "SELECT ingredientes, pasos, imagen FROM recetas WHERE id=?",
+            (rid,)
+        )
+        ing, pas, img = c.fetchone()
+        conn.close()
+
+        if os.path.exists(img):
             image = Image.open(img).resize((280, 180))
             self.photo = ImageTk.PhotoImage(image)
             self.image_label.config(image=self.photo, text="")
@@ -282,6 +435,8 @@ class RecipesFrame(ttk.Frame):
 
         self.ingredients_label.config(text=f"🧂 Ingredientes:\n{ing}")
         self.steps_label.config(text=f"👣 Pasos:\n{pas}")
+
+
 
 # ============================================================
 # EJECUCIÓN
